@@ -1,16 +1,39 @@
-# React + Vite
+# CodeCourt frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+CodeCourt is a responsive GitHub contribution analysis dashboard built with React
+and Vite. Its palette pairs a deep slate/indigo workspace (`#121c2c`) with mint
+accents (`#72dfb7`), soft neutrals, and restrained gold highlights.
 
-Currently, two official plugins are available:
+## Run locally
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+Start the backend first (see the repository's main README), then from this
+directory:
 
-## React Compiler
+```powershell
+npm install
+Copy-Item .env.example .env
+npm run dev
+```
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+By default, the UI calls `http://127.0.0.1:8000`. Set
+`VITE_API_BASE_URL` in `.env` if the backend is hosted elsewhere. The backend
+must allow the frontend's origin through CORS.
 
-## Expanding the ESLint configuration
+## What it does
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+- Accepts a public GitHub URL or `owner/repository` and starts `POST /analyze`.
+- Polls `GET /analyses/{analysis_id}` until analysis succeeds or fails.
+- Shows the contributor ranking, score, commit and survival data, weekly
+  contribution timeline, directory ownership, and anomaly notes.
+- Downloads the completed report from `GET /reports/{analysis_id}/pdf`.
+- Displays recent analysis IDs from `GET /analyses`.
+
+The frontend does not require GitHub OAuth. Repository analysis and report
+requests go directly to the CodeCourt backend API.
+
+## Checks
+
+```powershell
+npm run lint
+npm run build
+```
