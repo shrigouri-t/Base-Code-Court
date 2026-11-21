@@ -7,6 +7,10 @@ class Settings(BaseSettings):
     """Runtime configuration for the CodeCourt backend."""
 
     GITHUB_TOKEN: str = ""
+    CORS_ORIGINS: str = (
+        "http://localhost:3000,http://localhost:5173,"
+        "http://127.0.0.1:3000,http://127.0.0.1:5173"
+    )
     DATABASE_URL: str = "sqlite:///./codecourt.db"
     CACHE_DIR: str = "../cache"
     MAX_REPO_SIZE_MB: int = 500

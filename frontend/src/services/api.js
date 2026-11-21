@@ -57,6 +57,12 @@ export async function getReportPdf(analysisId) {
 }
 
 export function getErrorMessage(error) {
+  if (!error.response && error.code === "ECONNABORTED") {
+    return "The request timed out. Please try again.";
+  }
+  if (!error.response && error.message === "Network Error") {
+    return "Cannot reach the CodeCourt backend. Start the backend and check VITE_API_BASE_URL.";
+  }
   return (
     error.response?.data?.error?.message ||
     error.response?.data?.detail ||
