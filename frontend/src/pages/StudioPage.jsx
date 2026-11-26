@@ -7,6 +7,7 @@ import {
   getAnalysisStatus,
   getErrorMessage,
   getReportPdf,
+  getReportPdfUrl,
 } from "../services/api";
 const TimelineChart = lazy(() => import("../components/TimelineChart"));
 
@@ -20,6 +21,7 @@ const iconPaths = {
   chart: "M3 3v18h18M8 15l4-4 4 4 5-7",
   code: "m8 17-5-5 5-5m8 10 5-5-5-5m-2-12-4 16",
   download: "M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4m4-5 5 5 5-5m-5 5V3",
+  eye: "M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6S2.5 12 2.5 12Zm9.5 3a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z",
   external: "M14 3h7v7m-1-6-9 9m-4-7H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2",
   shield: "M12 22s8-4 8-11V5l-8-3-8 3v6c0 7 8 11 8 11Zm-3-11 2 2 4-4",
   check: "m5 12 4 4L19 6",
@@ -223,7 +225,7 @@ function AnomalyList({ anomalies }) {
   );
 }
 
-function ResultsPanel({ status, results, onDownload, downloading }) {
+function ResultsPanel({ status, results, onDownload, downloading, analysisId }) {
   const { scores, anomalies, timeline, ownership } = results;
   const ranking = scores.ranking || [];
   const meta = scores.meta || {};
@@ -248,6 +250,16 @@ function ResultsPanel({ status, results, onDownload, downloading }) {
           </div>
           <div className="results-actions">
             <span className="status-pill"><Icon name="check" size={12} /> Analysis complete</span>
+            <a
+              className="secondary-button"
+              href={getReportPdfUrl(analysisId)}
+              target="_blank"
+              rel="noreferrer"
+              aria-label="View PDF report"
+            >
+              <Icon name="eye" size={14} />
+              View Report
+            </a>
             <button type="button" className="secondary-button" onClick={onDownload} disabled={downloading}>
               {downloading ? <span className="spinner" /> : <Icon name="download" size={14} />}
               {downloading ? "Preparing…" : "Download PDF"}
@@ -580,6 +592,7 @@ function StudioPage() {
                 results={currentResults.data}
                 onDownload={handleDownload}
                 downloading={downloading}
+                analysisId={analysisId}
               />
             ) : showEmpty ? <EmptyResults /> : null}
           </div>

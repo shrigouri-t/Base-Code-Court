@@ -56,6 +56,10 @@ export async function getReportPdf(analysisId) {
   return response.data;
 }
 
+export function getReportPdfUrl(analysisId) {
+  return `${API_BASE_URL}/reports/${encodeURIComponent(analysisId)}/pdf/view`;
+}
+
 export function getErrorMessage(error) {
   if (!error.response && error.code === "ECONNABORTED") {
     return "The request timed out. Please try again.";

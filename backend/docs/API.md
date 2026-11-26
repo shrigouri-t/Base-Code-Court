@@ -25,6 +25,11 @@ Endpoints:
 - `GET /reports/{id}/pdf`
 - `GET /health`
 
+The PDF presents available signal scores and weighted points in a
+per-contributor comparison table, followed by a final-score bar chart. Signals
+unavailable for the repository are omitted from the table; anomaly details are
+not included in this presentation.
+
 Bash:
 
 ```bash

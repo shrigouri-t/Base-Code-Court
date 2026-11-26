@@ -17,3 +17,10 @@ def test_pdf_endpoint_requires_completed_analysis():
         response = client.get("/reports/does-not-exist/pdf")
         assert response.status_code == 404
         assert response.json()["error"]["code"] == "analysis_not_found"
+
+
+def test_pdf_view_endpoint_requires_completed_analysis():
+    with TestClient(app) as client:
+        response = client.get("/reports/does-not-exist/pdf/view")
+        assert response.status_code == 404
+        assert response.json()["error"]["code"] == "analysis_not_found"

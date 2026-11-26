@@ -85,6 +85,25 @@ def ownership(analysis_id: str, service=Depends(get_service)):
 
 @router.get("/reports/{analysis_id}/pdf")
 def report_pdf(analysis_id: str, service=Depends(get_service)):
+    pdf, filename = _build_report_pdf(analysis_id, service)
+    return Response(
+        content=pdf,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+@router.get("/reports/{analysis_id}/pdf/view")
+def report_pdf_view(analysis_id: str, service=Depends(get_service)):
+    pdf, filename = _build_report_pdf(analysis_id, service)
+    return Response(
+        content=pdf,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'inline; filename="{filename}"'},
+    )
+
+
+def _build_report_pdf(analysis_id: str, service):
     analysis, rows = service.get_scores(analysis_id)
     report = analysis.report_json or {}
     ranking = [
@@ -118,9 +137,4 @@ def report_pdf(analysis_id: str, service=Depends(get_service)):
         session.close()
 
     from app.core.pdf_export import report_to_pdf
-    pdf = report_to_pdf(pdf_report, ranking)
-    return Response(
-        content=pdf,
-        media_type="application/pdf",
-        headers={"Content-Disposition": f'attachment; filename="codecourt-{analysis_id}.pdf"'},
-    )
+    return report_to_pdf(pdf_report, ranking), f"codecourt-{analysis_id}.pdf"
