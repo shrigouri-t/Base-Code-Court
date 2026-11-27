@@ -49,7 +49,24 @@ class JobRunner:
                     raise AnalysisTimeout("Analysis timed out")
             output = self.pipeline_fn(request, progress=progress, should_stop=should_stop)
             crud.save_results(session, analysis_id, [
-                {"author_key": item.author_key, "display_name": item.display_name, "display_email": item.display_email, "rank": item.rank, "score": item.score, "base_score": item.base_score, "share_of_team": item.share_of_team, "penalty_multiplier": item.penalty_multiplier, "commits": item.commits, "credited_lines": item.credited_lines, "surviving_lines": item.surviving_lines, "signals": {key: value.__dict__ for key, value in item.signals.items()}, "notes": list(item.notes)}
+                {
+                    "author_key": item.author_key,
+                    "display_name": item.display_name,
+                    "display_email": item.display_email,
+                    "rank": item.rank,
+                    "score": item.score,
+                    "base_score": item.base_score,
+                    "share_of_team": item.share_of_team,
+                    "penalty_multiplier": item.penalty_multiplier,
+                    "commits": item.commits,
+                    "credited_lines": item.credited_lines,
+                    "surviving_lines": item.surviving_lines,
+                    "signals": {
+                        key: value.__dict__ for key, value in item.signals.items()
+                    },
+                    "notes": list(item.notes),
+                    "feature_impacts": item.feature_impacts,
+                }
                 for item in output.report.authors
             ], [
                 {"author_key": item.author_key, "display_name": item.display_name, "kind": item.kind, "severity": item.severity, "message": item.message, "evidence": item.evidence, "penalty_multiplier": item.penalty_multiplier}

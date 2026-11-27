@@ -108,6 +108,8 @@ def run_pipeline(
     stop()
     human_keys = [item.author_key for item in sizes]
     extra: dict[str, dict[str, float]] = {}
+    activity_stats = {}
+    github_data_available = False
     dropped: dict[str, str] = {}
     warnings: list[str] = []
     if request.use_github and request.github_repo:
@@ -115,6 +117,10 @@ def run_pipeline(
         activity = collect_activity(owner, name, request.since, progress=lambda step: progress("github", 0.75, f"Collecting GitHub {step}") if progress else None)
         login_map, _ = build_login_map(activity.commit_logins, human_keys)
         activity_signals = compute_activity_signals(activity, login_map, human_keys, config.scaling)
+        activity_stats = activity_signals.stats
+        github_data_available = (
+            activity_signals.review is not None and activity_signals.issues is not None
+        )
         if activity_signals.review is not None:
             extra["review"] = activity_signals.review
         if activity_signals.issues is not None:
@@ -130,7 +136,12 @@ def run_pipeline(
         dropped["consistency"] = consistency.dropped_reason or "not collected yet"
     anomalies = detect_anomalies(diff_stats, sizes, survival, deadline=request.deadline)
     penalties = build_penalties(anomalies) if request.enable_penalties else {}
-    report = compute_scores(sizes, qualities, survival, config, penalties, extra, dropped)
+    report = compute_scores(
+        sizes, qualities, survival, config, penalties, extra, dropped,
+        activity_stats=activity_stats,
+        github_data_available=github_data_available,
+        anomaly_flags={item.author_key for item in anomalies},
+    )
     if progress:
         progress("scoring", 1.0, "Scoring complete")
     commit_rows = [

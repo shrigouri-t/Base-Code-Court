@@ -1,6 +1,10 @@
 """Transparent contribution-score computation."""
 
 from dataclasses import dataclass
+import logging
+
+from app.core.activity_signals import ActivityStats
+from app.core.ml_scoring import predict_feature_impacts, predict_final_scores
 from app.core.quality_signal import AuthorQuality, adjusted_size
 from app.core.scoring_config import (
     SIGNALS,
@@ -10,6 +14,9 @@ from app.core.scoring_config import (
 )
 from app.core.size_signal import AuthorSize
 from app.core.survival import AuthorSurvival, SurvivalResult
+
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -46,6 +53,7 @@ class AuthorScore:
     adjusted_size: float
     surviving_lines: int
     notes: tuple[str, ...]
+    feature_impacts: list[dict] | None = None
 
 
 @dataclass(frozen=True)
@@ -87,11 +95,16 @@ def compute_scores(
     penalties: dict[str, tuple[float, str]] | None = None,
     extra_signals: dict[str, dict[str, float]] | None = None,
     dropped_reasons: dict[str, str] | None = None,
+    activity_stats: dict[str, ActivityStats] | None = None,
+    github_data_available: bool = False,
+    anomaly_flags: set[str] | None = None,
 ) -> ScoreReport:
     """Compute deterministic human-author contribution scores."""
     config = config or make_config()
     extra_signals = extra_signals or {}
     dropped_reasons = dropped_reasons or {}
+    activity_stats = activity_stats or {}
+    anomaly_flags = anomaly_flags or set()
     unknown_extra = set(extra_signals) - {"review", "issues", "consistency"}
     if unknown_extra:
         raise ValueError(f"unknown extra signal names: {', '.join(sorted(unknown_extra))}")
@@ -194,17 +207,68 @@ def compute_scores(
             raw_multiplier, reason = penalties[size.author_key]
             multiplier = max(config.min_penalty_multiplier, min(1.0, float(raw_multiplier)))
             penalty_reasons = (reason,)
+        activity = activity_stats.get(size.author_key)
+        model_features = {
+            "commits_count": float(size.commits),
+            "lines_added": float(size.meaningful_credited),
+            "quality_modifier": float(quality.quality_modifier if quality else 1.0),
+            "adjusted_work": float(adjusted),
+            "surviving_lines": float(author_survival.surviving_lines if author_survival else 0),
+            "survival_rate": float(author_survival.survival_rate or 0.0) if author_survival else 0.0,
+            "prs_reviewed": float(activity.prs_reviewed if activity else 0),
+            "issues_handled": float(activity.issues_opened + activity.issue_comments if activity else 0),
+            "github_data_available": float(github_data_available),
+            "work_score": round(signal_values["work"].score * 100, 2),
+            "survival_score": round(signal_values["survival"].score * 100, 2),
+            "ownership_score": round(signal_values["ownership"].score * 100, 2),
+            "review_score": round(signal_values["review"].score * 100, 2),
+            "issues_score": round(signal_values["issues"].score * 100, 2),
+            "consistency_score": round(signal_values["consistency"].score * 100, 2),
+            "base_score": float(round(base, 2)),
+            "anomaly_flag": float(size.author_key in anomaly_flags or bool(penalty_reasons)),
+            "penalty_multiplier": float(multiplier),
+        }
         draft.append({
             "size": size, "signals": signal_values, "base": round(base, 2),
             "multiplier": multiplier, "penalty_reasons": penalty_reasons, "notes": tuple(notes),
             "quality_modifier": quality.quality_modifier if quality else 1.0,
             "adjusted": adjusted, "surviving": author_survival.surviving_lines if author_survival else 0,
+            "model_features": model_features,
         })
-    final_total = sum(item["base"] * item["multiplier"] for item in draft)
-    draft.sort(key=lambda item: (-item["base"] * item["multiplier"], item["size"].display_name, item["size"].author_key))
+    feature_rows = [item["model_features"] for item in draft]
+    model_fallback = False
+    try:
+        predictions = predict_final_scores(feature_rows)
+        if len(predictions) != len(draft):
+            raise ValueError("model returned an unexpected number of scores")
+    except Exception:
+        logger.exception("ML score inference failed; using rules-based base scores")
+        predictions = [item["base"] for item in draft]
+        feature_impacts = [None] * len(draft)
+        model_fallback = True
+    else:
+        try:
+            feature_impacts = predict_feature_impacts(feature_rows)
+            if len(feature_impacts) != len(draft):
+                raise ValueError("attribution returned an unexpected number of rows")
+        except Exception:
+            logger.exception("Feature attribution failed; returning scores without impacts")
+            feature_impacts = [None] * len(draft)
+
+    for item, score, impacts in zip(draft, predictions, feature_impacts):
+        item["final_score"] = score
+        item["feature_impacts"] = impacts
+        if model_fallback:
+            item["notes"] = item["notes"] + (
+                "ML inference unavailable; rules-based base score used.",
+            )
+        elif impacts is None:
+            item["notes"] = item["notes"] + ("Feature attribution unavailable.",)
+    final_total = sum(item["final_score"] for item in draft)
+    draft.sort(key=lambda item: (-item["final_score"], item["size"].display_name, item["size"].author_key))
     authors = []
     for rank, item in enumerate(draft, 1):
-        final_score = round(item["base"] * item["multiplier"], 2)
+        final_score = item["final_score"]
         authors.append(AuthorScore(
             item["size"].author_key, item["size"].display_name, item["size"].display_email,
             rank, final_score, item["base"], round(item["multiplier"], 4),
@@ -212,6 +276,7 @@ def compute_scores(
             round(final_score / final_total * 100, 2) if final_total else 0.0,
             item["signals"], item["size"].commits, item["size"].meaningful_credited,
             item["quality_modifier"], item["adjusted"], item["surviving"], item["notes"],
+            item["feature_impacts"],
         ))
     repo_notes = [f"{name}: {reason}" for name, reason in dropped.items()]
     if len(sizes) == 1:

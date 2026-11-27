@@ -25,6 +25,11 @@ Endpoints:
 - `GET /reports/{id}/pdf`
 - `GET /health`
 
+Each contributor in `GET /scores/{id}` includes `feature_impacts`: up to six
+signed model contributions in score points, with the feature key and readable
+label. The field is `null` when attribution is unavailable or the rules-based
+score fallback is used.
+
 The PDF presents available signal scores and weighted points in a
 per-contributor comparison table, followed by a final-score bar chart. Signals
 unavailable for the repository are omitted from the table; anomaly details are

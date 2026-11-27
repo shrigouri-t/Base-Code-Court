@@ -63,6 +63,7 @@ class ContributorScore(Base):
     surviving_lines: Mapped[int] = mapped_column()
     signals: Mapped[dict] = mapped_column(JSONType)
     notes: Mapped[list] = mapped_column(JSONType)
+    feature_impacts: Mapped[list[dict] | None] = mapped_column(JSONType, nullable=True)
 
 
 class AnomalyRow(Base):
