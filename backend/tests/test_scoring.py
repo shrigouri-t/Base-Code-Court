@@ -122,6 +122,46 @@ def test_model_prediction_is_final_score_and_receives_training_features(monkeypa
     }]
 
 
+def test_work_metadata_refines_existing_model_features_only(monkeypatch) -> None:
+    from app.core.ml_scoring import MODEL_FEATURES
+
+    captured: list[dict[str, float]] = []
+    monkeypatch.setattr(
+        "app.core.scoring.predict_final_scores",
+        lambda rows: captured.extend(rows) or [40.0],
+    )
+    monkeypatch.setattr(
+        "app.core.scoring.predict_feature_impacts",
+        lambda rows: [None] * len(rows),
+    )
+    size = AuthorSize(
+        "alice", "Alice", "alice@example.com", 3, 0, 0.0,
+        100, 100, 100, 0, 0, 0, 0.0,
+        work_metrics={
+            "ast_nodes_count": 12,
+            "ast_weighted_volume": 18.0,
+            "declaration_nodes": 2,
+            "control_nodes": 4,
+            "expression_nodes": 6,
+            "nesting_depth": 2,
+            "clean_nontrivial_lines": 10,
+            "language_distribution": {"Python": 1},
+            "language_weight": 1.25,
+            "ast_files_parsed": 1,
+            "ast_files_total": 1,
+            "refactoring_lines": 10,
+        },
+    )
+
+    report = compute_scores([size], [_quality("alice", "Alice", 1.2)], None)
+
+    assert tuple(captured[0]) == MODEL_FEATURES
+    assert all(type(value) is float for value in captured[0].values())
+    assert captured[0]["adjusted_work"] == 156.0
+    assert report.authors[0].work_metadata["refactoring_bonus"] == 4.8
+    assert report.authors[0].work_metadata["ast_nodes_count"] == 12
+
+
 def test_non_penalized_anomaly_sets_model_feature(monkeypatch) -> None:
     captured: list[dict[str, float]] = []
 

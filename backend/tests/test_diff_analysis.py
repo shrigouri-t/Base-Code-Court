@@ -2,11 +2,12 @@
 
 from pathlib import Path
 import subprocess
+from types import SimpleNamespace
 
 import pytest
 from pydriller import Repository
 
-from app.core.diff_analysis import analyze_commit
+from app.core.diff_analysis import _file_stats, analyze_commit
 
 
 def _git(path: Path, *arguments: str) -> None:
@@ -56,3 +57,34 @@ def test_analyze_commit_counts_source_and_docs(analysis_repo: Path) -> None:
     assert docs.meaningful_added == 0
     assert docs.docs_lines_added == 3
     assert docs.is_trivial
+    assert source.work_metrics["ast_nodes_count"] > 0
+
+
+def test_refactoring_candidate_requires_preserved_function_structure() -> None:
+    file = SimpleNamespace(
+        new_path="src/calculate.py",
+        old_path="src/calculate.py",
+        change_type="MODIFY",
+        diff_parsed={
+            "added": [(2, "    return value * 2")],
+            "deleted": [(2, "    if value > 0:"), (3, "        return value + 1")],
+        },
+        diff=(
+            "@@ -1,3 +1,2 @@\n"
+            " def calculate(value):\n"
+            "-    if value > 0:\n"
+            "-        return value + 1\n"
+            "+    return value * 2\n"
+        ),
+        source_code_before=(
+            "def calculate(value):\n"
+            "    if value > 0:\n"
+            "        return value + 1\n"
+        ),
+        source_code="def calculate(value):\n    return value * 2\n",
+    )
+
+    stats = _file_stats(file)
+
+    assert stats.work_metrics["is_ast_parsed"]
+    assert stats.work_metrics["refactoring_lines"] == 2

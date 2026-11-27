@@ -272,6 +272,10 @@
   min-width: 0;
 }
 
+.primary-column > * {
+  min-width: 0;
+}
+
 .panel {
   border: 1px solid var(--line);
   border-radius: 17px;
@@ -726,36 +730,95 @@
   font-weight: 800;
 }
 
-.feature-impact-toggle {
+.contributor-analysis-link {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  padding: 6px 8px;
+  gap: 3px;
+  margin-top: 5px;
+  padding: 4px 6px;
   border: 1px solid #e1ebe6;
   border-radius: 7px;
   background: #fff;
   color: #39745e;
-  cursor: pointer;
   font-family: var(--sans);
   font-size: 9px;
   font-weight: 650;
+  text-decoration: none;
 }
 
-.feature-impact-toggle:hover,
-.feature-impact-toggle:focus-visible {
+.contributor-analysis-link:hover,
+.contributor-analysis-link:focus-visible {
   border-color: #9dcdb8;
   background: #f4faf7;
   outline: none;
 }
 
-.feature-impact-detail-row td {
-  padding: 0 !important;
-  background: #fbfdfc;
-  white-space: normal;
-}
-
 .feature-impact-breakdown {
   padding: 18px 20px;
+}
+
+.work-signal-details {
+  margin: 0 20px 18px;
+  padding: 13px 14px;
+  border: 1px solid #e5eee8;
+  border-radius: 10px;
+  background: #fff;
+}
+
+.work-signal-heading {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: #58816f;
+}
+
+.work-signal-heading h4 {
+  margin: 0;
+  color: #2c493d;
+  font-size: 10px;
+}
+
+.work-signal-metrics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-top: 10px;
+}
+
+.work-signal-metrics span {
+  padding: 5px 8px;
+  border: 1px solid #e7eee9;
+  border-radius: 99px;
+  background: #f8fbf9;
+  color: #617169;
+  font-size: 9px;
+}
+
+.work-signal-metrics strong {
+  color: #304c3e;
+}
+
+.work-signal-metrics .work-signal-bonus {
+  border-color: #d7eee3;
+  background: #eff9f3;
+  color: #32805c;
+}
+
+.work-signal-metrics .work-signal-bonus strong {
+  color: #32805c;
+}
+
+.work-signal-languages,
+.work-signal-fallback,
+.work-signal-details > p {
+  margin: 9px 0 0;
+  color: #87958d;
+  font-size: 9px;
+  line-height: 1.5;
+}
+
+.work-signal-fallback {
+  color: #a56b3f;
 }
 
 .feature-impact-heading {
@@ -1465,5 +1528,341 @@
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+  }
+}
+
+.personal-analysis-content {
+  max-width: 1080px;
+}
+
+.personal-analysis-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0 0 18px;
+  color: #4a7562;
+  font-size: 12px;
+  font-weight: 650;
+  text-decoration: none;
+}
+
+.personal-analysis-back:hover {
+  color: #285d4b;
+}
+
+.personal-analysis-hero {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 32px;
+  border-radius: 18px;
+  background:
+    radial-gradient(ellipse at 92% 10%, rgba(116, 244, 211, 0.13), transparent 35%),
+    linear-gradient(118deg, #121c2c 4%, #18263a 100%);
+  color: white;
+  box-shadow: 0 15px 38px rgba(17, 29, 47, 0.13);
+}
+
+.personal-analysis-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--mint);
+  font-size: 10px;
+  font-weight: 750;
+  letter-spacing: 1.4px;
+}
+
+.personal-analysis-hero h1 {
+  margin: 13px 0 7px;
+  color: #fff;
+  font-size: clamp(26px, 4vw, 40px);
+  letter-spacing: -1.5px;
+}
+
+.personal-analysis-hero p {
+  margin: 0;
+  color: #aab8ca;
+  font-size: 12px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+
+.personal-analysis-hero p span {
+  padding: 0 4px;
+  color: var(--mint);
+}
+
+.personal-rank-card {
+  display: grid;
+  flex: 0 0 150px;
+  justify-items: center;
+  gap: 5px;
+  padding: 18px 14px;
+  border: 1px solid rgba(210, 224, 238, 0.16);
+  border-radius: 13px;
+  background: rgba(31, 47, 68, 0.8);
+}
+
+.personal-rank-card span,
+.personal-rank-card small {
+  color: #aab8ca;
+  font-size: 10px;
+}
+
+.personal-rank-card strong {
+  color: var(--mint);
+  font-family: var(--mono);
+  font-size: 30px;
+}
+
+.personal-analysis-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin: 15px 0;
+}
+
+.personal-analysis-stat {
+  display: grid;
+  min-height: 84px;
+  align-content: center;
+  gap: 5px;
+  padding: 13px 15px;
+  border: 1px solid #e8edf0;
+  border-radius: 11px;
+  background: #fff;
+}
+
+.personal-analysis-stat > span {
+  color: #85929f;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.45px;
+  text-transform: uppercase;
+}
+
+.personal-analysis-stat > strong {
+  color: #285d4b;
+  font-family: var(--mono);
+  font-size: 20px;
+}
+
+.personal-analysis-stat > small {
+  color: #98a3ad;
+  font-size: 9px;
+}
+
+.personal-analysis-section {
+  margin-top: 14px;
+  padding: 21px 23px;
+}
+
+.personal-section-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+  color: #58816f;
+}
+
+.personal-section-heading h2 {
+  margin: 0;
+  color: var(--ink);
+  font-size: 16px;
+  letter-spacing: -0.3px;
+}
+
+.personal-section-heading p {
+  margin: 5px 0 0;
+  color: #8795a1;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.personal-analysis-section .feature-impact-breakdown {
+  padding: 14px 0 0;
+}
+
+.personal-analysis-section .work-signal-details {
+  margin: 0;
+}
+
+.personal-signal-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 9px;
+}
+
+.personal-signal-card {
+  min-width: 0;
+  padding: 13px;
+  border: 1px solid #e8edf0;
+  border-radius: 10px;
+  background: #fbfcfc;
+}
+
+.personal-signal-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.personal-signal-card-top h3 {
+  margin: 0;
+  color: #405366;
+  font-size: 11px;
+}
+
+.personal-signal-card-top > span {
+  flex: 0 0 auto;
+  color: #9aa5ae;
+  font-size: 8px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.personal-signal-card-top > span.available {
+  color: #418367;
+}
+
+.personal-signal-card-top > span.unavailable {
+  color: #ad7a4c;
+}
+
+.personal-signal-points {
+  display: block;
+  margin-top: 10px;
+  color: #2f7659;
+  font-family: var(--mono);
+  font-size: 19px;
+}
+
+.personal-signal-points small {
+  color: #89968f;
+  font-family: var(--sans);
+  font-size: 9px;
+  font-weight: 500;
+}
+
+.personal-signal-meta {
+  display: grid;
+  gap: 5px;
+  margin-top: 9px;
+  padding-top: 9px;
+  border-top: 1px solid #edf0f1;
+}
+
+.personal-signal-meta span {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  color: #89959e;
+  font-size: 9px;
+}
+
+.personal-signal-meta strong {
+  color: #53645b;
+  font-family: var(--mono);
+  font-weight: 600;
+  text-align: right;
+}
+
+.personal-signal-card > p,
+.personal-analysis-empty {
+  margin: 10px 0 0;
+  color: #8795a1;
+  font-size: 10px;
+  line-height: 1.55;
+}
+
+.personal-notes {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding-left: 18px;
+  color: #64736a;
+  font-size: 11px;
+  line-height: 1.55;
+}
+
+.personal-analysis-message {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 18px;
+  color: #687781;
+  font-size: 12px;
+}
+
+.personal-analysis-message > p {
+  margin: 0;
+}
+
+.personal-analysis-message > svg {
+  flex: 0 0 auto;
+  color: #b2784f;
+}
+
+.personal-analysis-message > a {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: #39745e;
+  font-weight: 650;
+  text-decoration: none;
+}
+
+@media (max-width: 760px) {
+  .personal-analysis-hero {
+    align-items: flex-start;
+    padding: 24px;
+  }
+
+  .personal-rank-card {
+    flex-basis: 125px;
+  }
+
+  .personal-analysis-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 540px) {
+  .personal-analysis-hero {
+    flex-direction: column;
+    padding: 21px;
+  }
+
+  .personal-rank-card {
+    grid-template-columns: auto auto auto;
+    align-items: center;
+    justify-items: start;
+    width: 100%;
+    padding: 10px 12px;
+  }
+
+  .personal-rank-card strong {
+    font-size: 20px;
+  }
+
+  .personal-analysis-stat {
+    min-height: 73px;
+    padding: 10px;
+  }
+
+  .personal-analysis-stat > strong {
+    font-size: 17px;
+  }
+
+  .personal-analysis-section {
+    padding: 17px 14px;
+  }
+
+  .personal-signal-grid {
+    grid-template-columns: minmax(0, 1fr);
   }
 }

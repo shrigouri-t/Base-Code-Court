@@ -1,7 +1,8 @@
 """Transparent contribution-score computation."""
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import logging
+from typing import Any
 
 from app.core.activity_signals import ActivityStats
 from app.core.ml_scoring import predict_feature_impacts, predict_final_scores
@@ -54,6 +55,7 @@ class AuthorScore:
     surviving_lines: int
     notes: tuple[str, ...]
     feature_impacts: list[dict] | None = None
+    work_metadata: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -112,15 +114,22 @@ def compute_scores(
     survival_by_key = {
         item.author_key: item for item in survival.authors
     } if survival else {}
-    adjusted_by_key = {
-        item.author_key: adjusted_size(
-            item.meaningful_credited,
-            quality_by_key.get(item.author_key).quality_modifier
-            if item.author_key in quality_by_key
-            else 1.0,
+    refactoring_bonus_by_key: dict[str, float] = {}
+    adjusted_by_key: dict[str, float] = {}
+    for item in sizes:
+        modifier = (
+            quality_by_key[item.author_key].quality_modifier
+            if item.author_key in quality_by_key else 1.0
         )
-        for item in sizes
-    }
+        refactoring_credit = item.work_metrics.get("refactoring_lines", 0) * 0.40
+        refactoring_bonus = refactoring_credit * modifier
+        effective_credited = item.meaningful_credited + refactoring_credit
+        refactoring_bonus_by_key[item.author_key] = round(refactoring_bonus, 2)
+        adjusted_by_key[item.author_key] = round(
+            adjusted_size(effective_credited, modifier)
+            * item.work_metrics.get("language_weight", 1.0),
+            2,
+        )
     max_adjusted = max(adjusted_by_key.values(), default=0.0)
     survival_reason = None
     survival_available = (
@@ -234,6 +243,10 @@ def compute_scores(
             "quality_modifier": quality.quality_modifier if quality else 1.0,
             "adjusted": adjusted, "surviving": author_survival.surviving_lines if author_survival else 0,
             "model_features": model_features,
+            "work_metadata": {
+                **size.work_metrics,
+                "refactoring_bonus": refactoring_bonus_by_key[size.author_key],
+            },
         })
     feature_rows = [item["model_features"] for item in draft]
     model_fallback = False
@@ -276,7 +289,7 @@ def compute_scores(
             round(final_score / final_total * 100, 2) if final_total else 0.0,
             item["signals"], item["size"].commits, item["size"].meaningful_credited,
             item["quality_modifier"], item["adjusted"], item["surviving"], item["notes"],
-            item["feature_impacts"],
+            item["feature_impacts"], item["work_metadata"],
         ))
     repo_notes = [f"{name}: {reason}" for name, reason in dropped.items()]
     if len(sizes) == 1:

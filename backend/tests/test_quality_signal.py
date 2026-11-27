@@ -3,6 +3,7 @@
 from datetime import datetime, timezone
 
 from app.core.quality_analysis import CommitQualityStats, FunctionTouch
+from app.core.diff_analysis import CommitDiffStats
 from app.core.quality_signal import adjusted_size, compute_quality_signal
 
 
@@ -32,3 +33,30 @@ def test_low_confidence_and_empty() -> None:
     assert humans[0].low_confidence
     assert bots == []
     assert compute_quality_signal([]) == ([], [])
+
+
+def test_ast_complexity_refines_quality_modifier_within_bounds() -> None:
+    quality_stats = [_stats("simple", "Simple", 0.5), _stats("complex", "Complex", 0.5)]
+
+    def diff_stats(key: str, name: str, control_nodes: int, depth: int):
+        return CommitDiffStats(
+            "hash", key, name, f"{key}@example.com", datetime.now(timezone.utc),
+            False, False, 1, 1, 10, 10, 10, 0, 0, 0, False, False, [],
+            work_metrics={
+                "ast_nodes_count": 10,
+                "control_nodes": control_nodes,
+                "nesting_depth": depth,
+                "ast_files_parsed": 1,
+            },
+        )
+
+    humans, _ = compute_quality_signal(
+        quality_stats,
+        [
+            diff_stats("simple", "Simple", 0, 0),
+            diff_stats("complex", "Complex", 8, 5),
+        ],
+    )
+    modifiers = {item.author_key: item.quality_modifier for item in humans}
+
+    assert 0.6 <= modifiers["complex"] < modifiers["simple"] <= 1.3

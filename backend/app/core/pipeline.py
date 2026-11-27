@@ -103,7 +103,7 @@ def run_pipeline(
         progress("commits", 0.50, f"Analyzed {len(diff_stats)} commits")
     stop()
     sizes, _ = compute_size_signal(diff_stats)
-    qualities, _ = compute_quality_signal(quality_stats)
+    qualities, _ = compute_quality_signal(quality_stats, diff_stats)
     survival = compute_survival(repo_path, diff_stats, progress=lambda d, t: progress("blame", 0.50 + 0.25 * d / max(t, 1), f"Blamed {d}/{t} files") if progress else None)
     stop()
     human_keys = [item.author_key for item in sizes]

@@ -19,6 +19,7 @@ def scores(analysis_id: str, service=Depends(get_service)):
             "penalty_multiplier": row.penalty_multiplier,
             "commits": row.commits, "credited_lines": row.credited_lines,
             "surviving_lines": row.surviving_lines, "signals": row.signals,
+            "work_metadata": row.signals.get("work_metadata"),
             "notes": row.notes, "feature_impacts": row.feature_impacts,
         }
         for row in rows

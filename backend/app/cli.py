@@ -111,7 +111,7 @@ def _run_quality(args: argparse.Namespace) -> int:
             repo_path, args.max_commits, progress=progress
         )
         size_humans, _ = compute_size_signal(diff_stats)
-        quality_humans, _ = compute_quality_signal(quality_stats)
+        quality_humans, _ = compute_quality_signal(quality_stats, diff_stats)
         size_by_key = {item.author_key: item for item in size_humans}
         print(
             "author | email | commits | credited lines | functions analyzed | "

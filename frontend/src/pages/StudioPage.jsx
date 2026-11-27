@@ -1,6 +1,6 @@
-import { Fragment, lazy, Suspense, useEffect, useState } from "react";
-import { useSearchParams } from "react-router-dom";
-import { ChevronDown, ChevronUp, Info } from "lucide-react";
+import { lazy, Suspense, useEffect, useState } from "react";
+import { Link, useSearchParams } from "react-router-dom";
+import { ArrowUpRight } from "lucide-react";
 import {
   createAnalysis,
   getAnalysisHistory,
@@ -10,7 +10,6 @@ import {
   getReportPdf,
   getReportPdfUrl,
 } from "../services/api";
-import FeatureImpactBreakdown from "../components/FeatureImpactBreakdown";
 
 const TimelineChart = lazy(() => import("../components/TimelineChart"));
 
@@ -140,9 +139,7 @@ function ProgressCard({ status }) {
   );
 }
 
-function RankingTable({ ranking = [] }) {
-  const [expandedContributor, setExpandedContributor] = useState(null);
-
+function RankingTable({ ranking = [], analysisId }) {
   if (!ranking.length) {
     return <div className="chart-empty">No contributor ranking was returned for this analysis.</div>;
   }
@@ -157,66 +154,41 @@ function RankingTable({ ranking = [] }) {
             <th>Commits</th>
             <th>Lines kept</th>
             <th>Team share</th>
-            <th>Explain</th>
           </tr>
         </thead>
         <tbody>
           {ranking.map((contributor, index) => (
-            <Fragment key={contributor.author_key}>
-              <tr key={contributor.author_key}>
-                <td><span className={`rank-badge ${index === 0 ? "rank-first" : ""}`}>{contributor.rank || index + 1}</span></td>
-                <td>
-                  <div className="contributor-cell">
-                    <span className="contributor-avatar">{initials(contributor.display_name || contributor.author_key)}</span>
-                    <span>
-                      {contributor.display_name || contributor.author_key}
-                      <span className="contributor-sub">{contributor.display_email || contributor.author_key}</span>
-                    </span>
-                  </div>
-                </td>
-                <td className="score-cell">
-                  <span className="score-meter">
-                    {Number(contributor.score || 0).toFixed(1)}
-                    <span className="score-meter-track">
-                      <span className="score-meter-fill" style={{ width: `${Math.min(100, Math.max(0, contributor.score || 0))}%` }} />
-                    </span>
+            <tr key={contributor.author_key}>
+              <td><span className={`rank-badge ${index === 0 ? "rank-first" : ""}`}>{contributor.rank || index + 1}</span></td>
+              <td>
+                <div className="contributor-cell">
+                  <span className="contributor-avatar">{initials(contributor.display_name || contributor.author_key)}</span>
+                  <span>
+                    {contributor.display_name || contributor.author_key}
+                    <span className="contributor-sub">{contributor.display_email || contributor.author_key}</span>
+                    <Link
+                      className="contributor-analysis-link"
+                      aria-label={`View personal analysis for ${contributor.display_name || contributor.author_key}`}
+                      to={`/personal-analysis/${encodeURIComponent(analysisId)}?contributor=${encodeURIComponent(contributor.author_key)}`}
+                    >
+                      Personal analysis
+                      <ArrowUpRight aria-hidden="true" size={12} />
+                    </Link>
                   </span>
-                </td>
-                <td>{formatNumber(contributor.commits)}</td>
-                <td>{formatNumber(contributor.surviving_lines)}</td>
-                <td>{`${Number(contributor.share_of_team || 0).toFixed(1)}%`}</td>
-                <td>
-                  <button
-                    type="button"
-                    className="feature-impact-toggle"
-                    aria-expanded={expandedContributor === contributor.author_key}
-                    aria-controls={`feature-impacts-${index}`}
-                    aria-label={`${expandedContributor === contributor.author_key ? "Hide" : "Show"} score explanation for ${contributor.display_name || contributor.author_key}`}
-                    onClick={() => setExpandedContributor(
-                      expandedContributor === contributor.author_key ? null : contributor.author_key,
-                    )}
-                  >
-                    {expandedContributor === contributor.author_key
-                      ? <ChevronUp aria-hidden="true" size={14} />
-                      : <><Info aria-hidden="true" size={13} /><ChevronDown aria-hidden="true" size={13} /></>}
-                    Explain
-                  </button>
-                </td>
-              </tr>
-              {expandedContributor === contributor.author_key && (
-                <tr key={`${contributor.author_key}-explanation`} className="feature-impact-detail-row">
-                  <td colSpan={7}>
-                    <div id={`feature-impacts-${index}`}>
-                      <FeatureImpactBreakdown
-                        featureImpacts={contributor.feature_impacts}
-                        score={contributor.score}
-                        baseScore={contributor.base_score}
-                      />
-                    </div>
-                  </td>
-                </tr>
-              )}
-            </Fragment>
+                </div>
+              </td>
+              <td className="score-cell">
+                <span className="score-meter">
+                  {Number(contributor.score || 0).toFixed(1)}
+                  <span className="score-meter-track">
+                    <span className="score-meter-fill" style={{ width: `${Math.min(100, Math.max(0, contributor.score || 0))}%` }} />
+                  </span>
+                </span>
+              </td>
+              <td>{formatNumber(contributor.commits)}</td>
+              <td>{formatNumber(contributor.surviving_lines)}</td>
+              <td>{`${Number(contributor.share_of_team || 0).toFixed(1)}%`}</td>
+            </tr>
           ))}
         </tbody>
       </table>
@@ -316,7 +288,7 @@ function ResultsPanel({ status, results, onDownload, downloading, analysisId }) 
           <h3>Contributor leaderboard</h3>
           <span>Ranked by contribution score</span>
         </div>
-        <RankingTable ranking={ranking} />
+        <RankingTable ranking={ranking} analysisId={analysisId} />
 
         <div className="detail-grid">
           <div className="detail-panel">

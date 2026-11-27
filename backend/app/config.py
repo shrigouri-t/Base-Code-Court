@@ -47,7 +47,7 @@ class Settings(BaseSettings):
     MAX_QUEUED_ANALYSES: int = 20
     ANALYSIS_TIMEOUT_SEC: int = 900
     ANALYSIS_TTL_HOURS: int = 24
-    PIPELINE_VERSION: str = "1"
+    PIPELINE_VERSION: str = "2"
     MAX_ANALYZE_PER_MINUTE_PER_IP: int = 6
     API_MAX_COMMITS: int = 20000
 

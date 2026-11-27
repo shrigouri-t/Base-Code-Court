@@ -1,7 +1,7 @@
 """Diff analysis for triviality and meaningful-line signals."""
 
 from collections import Counter
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any, Callable
 
@@ -9,9 +9,10 @@ from pydriller import Repository
 
 from app.config import settings
 from app.core.author_key import author_key, is_probably_bot
-from app.core.file_filters import classify_path, LANGUAGE_BY_EXT
+from app.core.file_filters import classify_path
 from app.core.line_classifier import classify_added_line
 from app.core.quality_analysis import CommitQualityStats, analyze_commit_quality
+from app.core.ast_analyzer import count_diff_ast_nodes, count_source_ast_nodes
 
 
 @dataclass(frozen=True)
@@ -30,6 +31,7 @@ class FileDiffStats:
     formatting_churn: int
     meaningful_added: int
     skipped_reason: str | None
+    work_metrics: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -54,6 +56,7 @@ class CommitDiffStats:
     is_bulk: bool
     is_trivial: bool
     skipped_files: list[str]
+    work_metrics: dict[str, Any] = field(default_factory=dict)
 
 
 def _change_type(file: Any) -> str:
@@ -65,6 +68,52 @@ def _change_type(file: Any) -> str:
 def _normalized(value: str) -> str:
     """Remove whitespace for formatting-churn matching."""
     return "".join(value.split())
+
+
+def _meaningful_deleted(lines: list[tuple[int, str]], extension: str) -> int:
+    """Count substantive deleted lines for refactoring-candidate detection."""
+    count = 0
+    block = False
+    for _, text in lines:
+        category, block = classify_added_line(text, extension, block)
+        if category == "meaningful":
+            count += 1
+    return count
+
+
+def _file_work_metrics(
+    file: Any,
+    path: str,
+    extension: str,
+    category: str,
+    deleted_lines: list[tuple[int, str]],
+    formatting_churn: int,
+) -> dict[str, Any]:
+    """Collect AST diagnostics and a refactoring candidate for one file."""
+    language = extension.lstrip(".").upper() or "Other"
+    metrics = count_diff_ast_nodes(path, file.diff or "", language)
+    refactoring_lines = 0
+    if category == "source" and deleted_lines:
+        before = count_source_ast_nodes(
+            path, getattr(file, "source_code_before", None), language
+        )
+        after = count_source_ast_nodes(
+            path, getattr(file, "source_code", None), language
+        )
+        if (
+            before["is_ast_parsed"]
+            and after["is_ast_parsed"]
+            and before["declaration_nodes"] > 0
+            and 0 < after["declaration_nodes"] <= before["declaration_nodes"]
+        ):
+            refactoring_lines = max(
+                0,
+                min(
+                    _meaningful_deleted(deleted_lines, extension),
+                    len(deleted_lines) - formatting_churn,
+                ),
+            )
+    return {**metrics, "refactoring_lines": refactoring_lines}
 
 
 def _file_stats(file: Any) -> FileDiffStats:
@@ -103,6 +152,10 @@ def _file_stats(file: Any) -> FileDiffStats:
         counts[line_category] += 1
         if line_category == "meaningful" and category == "source":
             meaningful += 1
+    extension = "." + path.rsplit(".", 1)[-1].lower() if "." in path.rsplit("/", 1)[-1] else ""
+    work_metrics = _file_work_metrics(
+        file, path, extension, category, deleted, churn
+    )
     return FileDiffStats(
         path=path,
         category=category,
@@ -116,7 +169,66 @@ def _file_stats(file: Any) -> FileDiffStats:
         formatting_churn=churn,
         meaningful_added=meaningful,
         skipped_reason=None,
+        work_metrics=work_metrics,
     )
+
+
+def _aggregate_work_metrics(files: list[FileDiffStats]) -> dict[str, Any]:
+    """Aggregate source-file diagnostics without mixing them into model inputs."""
+    metrics = [
+        item.work_metrics for item in files
+        if item.category in {"source", "config"} and item.work_metrics
+    ]
+    source_metrics = [
+        item.work_metrics for item in files
+        if item.category == "source" and item.work_metrics
+    ]
+    config_metrics = [
+        item.work_metrics for item in files
+        if item.category == "config" and item.work_metrics
+    ]
+    language_files = Counter(item["language"] for item in metrics)
+    clean_lines = sum(item["clean_nontrivial_lines"] for item in metrics)
+    source_clean_lines = sum(
+        item["clean_nontrivial_lines"] for item in source_metrics
+    )
+    source_weighted_lines = sum(
+        item["clean_nontrivial_lines"] * item["language_weight"]
+        for item in source_metrics
+    )
+    language_weight = (
+        source_weighted_lines / source_clean_lines
+        if source_clean_lines
+        else (
+            sum(item["language_weight"] for item in source_metrics)
+            / len(source_metrics)
+            if source_metrics else 1.0
+        )
+    )
+    return {
+        "declaration_nodes": sum(item["declaration_nodes"] for item in metrics),
+        "control_nodes": sum(item["control_nodes"] for item in metrics),
+        "expression_nodes": sum(item["expression_nodes"] for item in metrics),
+        "ast_nodes_count": sum(item["ast_nodes_count"] for item in metrics),
+        "ast_weighted_volume": round(
+            sum(item["ast_weighted_volume"] for item in metrics), 2
+        ),
+        "nesting_depth": max(
+            (item["nesting_depth"] for item in metrics), default=0
+        ),
+        "clean_nontrivial_lines": clean_lines,
+        "source_clean_nontrivial_lines": source_clean_lines,
+        "config_weighted_volume": round(
+            sum(item["ast_weighted_volume"] for item in config_metrics), 2
+        ),
+        "language_distribution": dict(sorted(language_files.items())),
+        "language_weight": round(language_weight, 4),
+        "ast_files_parsed": sum(bool(item["is_ast_parsed"]) for item in metrics),
+        "ast_files_total": len(metrics),
+        "refactoring_lines": sum(
+            item["refactoring_lines"] for item in source_metrics
+        ),
+    }
 
 
 def analyze_commit(commit: Any) -> CommitDiffStats:
@@ -166,6 +278,7 @@ def analyze_commit(commit: Any) -> CommitDiffStats:
         is_bulk=len(files) > settings.MAX_FILES_PER_COMMIT,
         is_trivial=meaningful < settings.TRIVIAL_COMMIT_THRESHOLD,
         skipped_files=skipped,
+        work_metrics=_aggregate_work_metrics(stats),
     )
 
 

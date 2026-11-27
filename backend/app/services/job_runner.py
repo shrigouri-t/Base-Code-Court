@@ -62,7 +62,10 @@ class JobRunner:
                     "credited_lines": item.credited_lines,
                     "surviving_lines": item.surviving_lines,
                     "signals": {
-                        key: value.__dict__ for key, value in item.signals.items()
+                        **{
+                            key: value.__dict__ for key, value in item.signals.items()
+                        },
+                        "work_metadata": item.work_metadata,
                     },
                     "notes": list(item.notes),
                     "feature_impacts": item.feature_impacts,
